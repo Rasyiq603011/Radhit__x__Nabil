@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter import PhotoImage
+import os
+from PIL import Image, ImageTk
 
 window = tk.Tk()
 window.title("Menu Utama")
@@ -66,56 +67,98 @@ def placeholder(entry, text):
 placeholder(SearchBar, "Search Your Book Here")
 
 # ===================== FRAME CONTENT (SCROLLABLE) =====================
-frame_content = tk.Frame(window, bg="white")
+# Ubah warna latar dari green ke black untuk konsistensi
+frame_content = tk.Frame(window, bg="black")
 frame_content.grid(row=1, column=0, sticky="nsew")
 
+# Wrap canvas in a container to make it center-aligned - ubah warna juga ke black
+canvas_container = tk.Frame(frame_content, bg="black")
+canvas_container.pack(expand=True, fill="both", anchor="center")
+
 # Canvas untuk Scrollable Frame
-canvas = tk.Canvas(frame_content, bg="white")
+canvas = tk.Canvas(canvas_container, bg="black")  # Ubah warna canvas ke black untuk konsistensi
 scrollbar = tk.Scrollbar(frame_content, orient="vertical", command=canvas.yview)
 
-scrollable_frame = tk.Frame(canvas, bg="white")
-scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-
-canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
 canvas.configure(yscrollcommand=scrollbar.set)
-
-canvas.pack(side="left", fill="both", expand=True)
+canvas_container.pack(fill="both", expand=True)
+canvas.pack(side="left", anchor="center", fill="both", expand=True)
 scrollbar.pack(side="right", fill="y")
 
-# Grid Konfigurasi untuk 5 Kolom
-cols = 5
-for i in range(cols):
-    scrollable_frame.columnconfigure(i, weight=1)
-
-# Load Gambar
-book_img = PhotoImage(file="image.png")  # Pastikan file ada
-book_img = book_img.subsample(2, 2)  # Resize agar pas
+# Buat frame yang akan discroll
+scrollable_frame = tk.Frame(canvas, bg="black")
 
 # Jumlah total buku
 total_books = 50
+cols = 5
+
+# Baris dan kolom
+rows = (total_books + cols - 1) // cols
+
+# Hitung ukuran button container
+button_width = 120  # Perkiraan lebar tombol (dengan padding)
+total_width = button_width * cols
+
+# Pastikan canvas window tetap di tengah
+def center_scrollable_frame(event=None):
+    canvas.update_idletasks()
+    canvas_width = canvas.winfo_width()
+    frame_width = total_width
+    
+    # Hitung posisi x untuk menempatkan frame di tengah
+    x_position = max(0, (canvas_width - frame_width) // 2)
+    
+    # Update posisi canvas window
+    canvas.create_window((x_position, 0), window=scrollable_frame, anchor="nw")
+    
+    # Update scroll region
+    canvas.configure(scrollregion=canvas.bbox("all"))
+
+# Load Gambar
+size = (100, 150)
+book_img = Image.open("image.jpeg")
+book_img = book_img.resize(size, Image.LANCZOS)
+book_img = ImageTk.PhotoImage(book_img)
 
 # Menampilkan Buku dalam Bentuk Tombol
 def buku_dipilih(nomor):
     print(f"Buku {nomor} dipilih!")
 
+# Hitung lebar button container
+button_container = tk.Frame(scrollable_frame, bg="black")
+button_container.pack(pady=20)
+
+# Tempatkan tombol dalam grid
 for index in range(total_books):
     row = index // cols
     col = index % cols
 
     btn = tk.Button(
-        scrollable_frame, image=book_img, bg="white", borderwidth=2,
+        button_container, image=book_img, bg="white", borderwidth=2, 
+        text=f"Buku {index}", compound="top",
         command=lambda i=index: buku_dipilih(i)
     )
     btn.image = book_img  # Agar tidak terhapus oleh garbage collector
-    btn.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
+    btn.grid(row=row, column=col, padx=10, pady=10)
 
+# Tambahkan frame kosong di bawah button_container untuk memberi ruang tambahan
+# dan mencegah terlihatnya latar belakang yang berbeda warna
+bottom_padding = tk.Frame(scrollable_frame, bg="black", height=50)
+bottom_padding.pack(fill="x", expand=True)
+
+# Bind events
+canvas.bind("<Configure>", center_scrollable_frame)
+scrollable_frame.bind("<Configure>", lambda e: center_scrollable_frame())
 
 def on_mouse_wheel(event):
     canvas.yview_scroll(-1 * (event.delta // 120), "units")
 
 canvas.bind_all("<MouseWheel>", on_mouse_wheel)
 
+# Initial center after all components are added
+window.update_idletasks()
+center_scrollable_frame()
 
+# ===================== FRAME FOOTER =====================
 frame_foot = tk.Frame(window, bg="#4C0086")
 frame_foot.grid(row=2, column=0, sticky="nsew")
 

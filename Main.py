@@ -1,19 +1,10 @@
-import pandas as pd
-import numpy as np
+from BookManager import BookManager
 
-buku = pd.read_excel('data_buku.xlsx')
+book = BookManager("data_buku.xlsx")
 
-# print(buku)
-# print(buku['Judul'].values)
-# print(buku['ISBN'].values)
-# print(buku['Pengarang'][0])
-# print(buku['Penerbit'][0])
-# print(buku['Tahun'][0])
+# book.book.info()
 
+# print(book.book)
 
-# print(buku[buku['ISBN'] == 2019].values)
-# print("\n\n\n")
-# print(buku[buku['Judul'].str.contains('Pan')].values)
-buku = buku[buku['Judul'].str.contains('Pan')].values
-
-print(buku)
+# print(book.book.sort_values(by="Judul", ascending=False))
+print(book.daftarKategori())

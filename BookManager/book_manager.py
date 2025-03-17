@@ -9,8 +9,8 @@ class BookManager:
         if os.path.exists(file_path):
             self.book = pd.read_excel(file_path)
         else:
-            self.book = pd.DataFrame(columns=['No', 'Judul', 'Pengarang', 'Penerbit', 'Tahun', 'ISBN', 'Status'])
-    
+            self.book = pd.DataFrame(columns=['Judul', 'Penulis', 'Penerbit', 'Tahun','Kategori', 'ISBN', 'Halaman', 'Deskripsi' ])
+
     def save(self):
         self.book.to_excel(self.file_path, index=False)
         return True
@@ -18,35 +18,50 @@ class BookManager:
     def getBook(self):
         return self.book
     
-    def get_book_by_isbn(self, isbn):
+    def getBookByIsbn(self, isbn):
         if isbn not in self.book['ISBN'].values:
             return None
         
         return self.book[self.book['ISBN'] == isbn].iloc[0]
     
-    def get_book_by_index(self, index):
+    def getBookByIndex(self, index):
         if index < 0 or index >= len(self.book):
             return None
         
         return self.book.iloc[index]
     
-    def get_books_by_field(self, field, value):
+    def searchBooks(self, query, field="Judul"):
+        query = query.lower()  # Pastikan query dalam huruf kecil
+
+        if field in self.book.columns:
+            # Gunakan regex untuk mencari substring tanpa case-sensitive
+            filtered_book = self.book[self.book[field].astype(str).str.contains(query, case=False, na=False)]
+        elif field == "all":
+            # Pencarian di semua kolom
+            mask = self.book.apply(lambda row: row.astype(str).str.contains(query, case=False, na=False).any(), axis=1)
+            filtered_book = self.book[mask]
+        else:
+            return []  # Jika field tidak valid, kembalikan list kosong
+
+        return filtered_book#.to_dict(orient="records")  # Konversi hasil ke list of dictionary
+        
+    def getBooksByField(self, field, value):
         if field not in self.book.columns:
             return pd.DataFrame()
         
-        if field in ['Judul', 'Pengarang', 'Penerbit', 'ISBN']:
+        if field in ['Judul', 'Penulis', 'Penerbit', 'ISBN', 'Kategori', 'Deskripsi']:
             hasil = self.book[self.book[field].str.contains(str(value), case=False, na=False)]
         else:
-            hasil = self.df[self.df[field] == value]
+            hasil = self.book[self.book[field] == value]
         
         return hasil
     
-    def add_book(self, judul, pengarang, penerbit, tahun, isbn):
-        if isbn in self.df['ISBN'].values:
+    def addBook(self, judul, pengarang, penerbit, tahun, isbn):
+        if isbn in self.book['ISBN'].values:
             return False
         
-        if len(self.df) > 0:
-            nomor = self.df['No'].max() + 1
+        if len(self.book) > 0:
+            nomor = self.book['No'].max() + 1
         else:
             nomor = 1
         
@@ -59,34 +74,44 @@ class BookManager:
             'ISBN': isbn
         }
         
-        self.df = pd.concat([self.df, pd.DataFrame([buku_baru])], ignore_index=True)
+        self.book = pd.concat([self.book, pd.DataFrame([buku_baru])], ignore_index=True)
         return True
     
-    def update_book(self, isbn, **kwargs):
-        if isbn not in self.df['ISBN'].values:
+    def updateBook(self, isbn, **kwargs):
+        if isbn not in self.book['ISBN'].values:
             return False
         
         for field, value in kwargs.items():
             if field in ['Judul', 'Pengarang', 'Penerbit', 'Tahun']:
-                self.df.loc[self.df['ISBN'] == isbn, field] = value
+                self.book.loc[self.book['ISBN'] == isbn, field] = value
         
         return True
     
-    def delete_book(self, isbn):
-        if isbn not in self.df['ISBN'].values:
+    def deleteBook(self, isbn):
+        if isbn not in self.book['ISBN'].values:
             return False
         
-        self.df = self.df[self.df['ISBN'] != isbn]
-        self.df = self.df.reset_index(drop=True)
-        self.df['No'] = self.df.index + 1
+        self.book = self.book[self.book['ISBN'] != isbn]
+        self.book = self.book.reset_index(drop=True)
+        self.book['No'] = self.book.index + 1
         
         return True
     
-    def get_column_values(self, column):
-        if column not in self.df.columns:
+    def getColumnValues(self, column):
+        if column not in self.book.columns:
             return []
         
-        return self.df[column].unique().tolist()
+        return self.book[column].unique().tolist()
     
-    def get_book_count(self):
-        return len(self.df)
+    def getBookCount(self):
+        return len(self.book)
+    
+    def daftarPenulis(self):
+        return self.book.drop_duplicates(subset='Penulis')['Penulis'].tolist()
+    
+    def daftarKategori(self):
+        return self.book['Kategori'].unique().tolist()
+    
+    def daftarPenerbit(self):
+        return self.book['Penerbit'].unique().tolist()
+    
